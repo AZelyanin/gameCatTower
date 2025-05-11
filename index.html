@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Кошачья Башня</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: sans-serif;
+      z-index: 10;
+    }
+    .notice {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      color: white;
+      font-family: sans-serif;
+      z-index: 10;
+    }
+  </style>
+
+  <!-- Phaser должен быть первым -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+
+  <!-- Сцены -->
+  <script src="scenes/MenuScene.js"></script>
+  <script src="scenes/GameScene.js"></script>
+  <script src="scenes/GameOverScene.js"></script>
+  <script src="scenes/ShopScene.js"></script>
+
+  <!-- Основной запуск игры -->
+  <script src="game.js"></script>
+</head>
+<body>
+<div id="ui">
+  <div id="scoreBoard">Очки: 0</div>
+  <div id="recordBoard">Рекорд: 0</div>
+</div>
+<div class="notice" id="bonusNotice"></div>
+<div class="notice" id="achievementsNotice"></div>
+</body>
+</html>11111
