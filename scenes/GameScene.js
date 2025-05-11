@@ -3,19 +3,25 @@ class GameScene extends Phaser.Scene {
       super({ key: 'GameScene' });
       this.score = 0;
       this.record = parseInt(localStorage.getItem('catTowerRecord')) || 0;
-      this.catTypes = [];
+      this.catTypes = [
+        { key: 'cat1', name: 'Обычный', points: 10, ability: null },
+        { key: 'cat2', name: 'Лёгкий', points: 15, ability: 'slowFall' },
+        { key: 'cat3', name: 'Гранатокот', points: 20, ability: 'explodeOnLand' },
+        { key: 'cat4', name: 'Бонусник', points: 10, ability: 'bonusOnTop' }
+      ];
       this.cloudSpeed = 150;
       this.dropCooldown = false;
       this.direction = 1;
       this.combo = 0;
       this.comboTimer = 0;
       this.achievementsShown = {};
-      this.shieldActive = localStorage.getItem('shieldEnabled') === 'true';
       this.dayKey = new Date().toISOString().slice(0, 10);
       this.dailyClaimed = localStorage.getItem(`daily_${this.dayKey}`) === 'true';
+      this.shieldActive = false;
     }
   
     preload() {
+      // Убедись, что все эти файлы есть в assets/
       this.load.image('background', 'assets/background.png');
       this.load.image('cat1', 'assets/cat1.png');
       this.load.image('cat2', 'assets/cat2.png');
@@ -24,6 +30,7 @@ class GameScene extends Phaser.Scene {
       this.load.image('cloud', 'assets/cloud.png');
       this.load.image('bonus', 'assets/bonus.png');
   
+      // Звуки (если есть)
       this.load.audio('drop', 'assets/drop.mp3');
       this.load.audio('bonus', 'assets/bonus.mp3');
       this.load.audio('bgm', 'assets/bgm.mp3');
@@ -35,11 +42,12 @@ class GameScene extends Phaser.Scene {
   
       // Музыка
       this.bgm = this.sound.add('bgm', { loop: true, volume: 0.3 });
-      if (!this.bgm.isPlaying) this.bgm.play();
+      if (this.soundOn !== false) this.bgm.play();
   
       // Земля
       this.ground = this.add.rectangle(187, 640, 375, 40, 0x228B22);
       this.physics.add.existing(this.ground, true);
+      this.ground.body.setImmovable(true);
   
       // Облако
       this.cloud = this.physics.add.image(187, 100, 'cloud').setScale(0.3);
@@ -51,48 +59,29 @@ class GameScene extends Phaser.Scene {
       this.physics.add.collider(this.catsGroup, this.ground, this.handleCatLanding, null, this);
       this.physics.add.collider(this.catsGroup, this.catsGroup);
   
-      // Управление
+      // Ввод
       this.input.on('pointerdown', () => this.dropCat());
       this.input.keyboard.on('keydown-SPACE', () => this.dropCat());
   
-      // UI
+      // Счёт
       this.scoreText = document.getElementById('scoreBoard');
       this.recordText = document.getElementById('recordBoard');
       this.updateScore(0);
   
-      // Бонусы
+      // Бонус каждые 10 секунд
       this.time.addEvent({
         delay: 10000,
         callback: () => this.addBonus(),
         loop: true
       });
   
-      // Комбо
       this.time.addEvent({
         delay: 1000,
         callback: () => this.checkCombo(),
         loop: true
       });
   
-      // Ежедневный бонус
       this.showDailyLogin();
-  
-      // Проверяем доступные кошки из localStorage
-      this.catTypes = [
-        { key: 'cat1', name: 'Обычный', points: 10, ability: null }
-      ];
-  
-      if (localStorage.getItem('unlockedCat2') === 'true') {
-        this.catTypes.push({ key: 'cat2', name: 'Лёгкий', points: 15, ability: 'slowFall' });
-      }
-  
-      if (localStorage.getItem('unlockedCat3') === 'true') {
-        this.catTypes.push({ key: 'cat3', name: 'Гранатокот', points: 20, ability: 'explodeOnLand' });
-      }
-  
-      if (localStorage.getItem('unlockedCat4') === 'true') {
-        this.catTypes.push({ key: 'cat4', name: 'Бонусник', points: 10, ability: 'bonusOnTop' });
-      }
     }
   
     update(time, delta) {
@@ -104,7 +93,7 @@ class GameScene extends Phaser.Scene {
     dropCat() {
       if (this.dropCooldown) return;
       this.dropCooldown = true;
-      this.time.delayedCall(300, () => this.dropCooldown = false);
+      this.time.delayedCall(300, () => (this.dropCooldown = false));
   
       let catData = Phaser.Utils.Array.GetRandom(this.catTypes);
       let cat = this.physics.add.image(this.cloud.x, this.cloud.y + 20, catData.key).setScale(0.3);
@@ -166,7 +155,7 @@ class GameScene extends Phaser.Scene {
     getTopCat() {
       let cats = this.catsGroup.getChildren();
       if (!cats.length) return null;
-      return cats.reduce((a, b) => a.y < b.y ? a : b);
+      return cats.reduce((a, b) => (a.y < b.y ? a : b));
     }
   
     checkCombo() {
@@ -186,7 +175,7 @@ class GameScene extends Phaser.Scene {
       this.physics.add.overlap(this.cloud, bonus, () => {
         bonus.destroy();
         this.updateScore(this.score + 100);
-        this.showNotice('bonusNotice', '💫 +100 очков!');
+        this.showNotice('bonusNotice', '💫 Бонус: +100 очков!');
         this.sound.add('bonus').play();
       });
     }
@@ -209,19 +198,20 @@ class GameScene extends Phaser.Scene {
       if (this.score >= 200 && !this.achievementsShown['ach_200']) {
         el.innerText = '🏅 Достижение: 200 очков!';
         this.achievementsShown['ach_200'] = true;
-        setTimeout(() => el.innerText = '', 3000);
+        setTimeout(() => (el.innerText = ''), 3000);
       }
+  
       if (this.score >= 500 && !this.achievementsShown['ach_500']) {
         el.innerText = '🏆 Достижение: 500 очков!';
         this.achievementsShown['ach_500'] = true;
-        setTimeout(() => el.innerText = '', 3000);
+        setTimeout(() => (el.innerText = ''), 3000);
       }
     }
   
     showNotice(id, text) {
       const el = document.getElementById(id);
       el.innerText = text;
-      setTimeout(() => el.innerText = '', 3000);
+      setTimeout(() => (el.innerText = ''), 3000);
     }
   
     showDailyLogin() {
@@ -229,23 +219,28 @@ class GameScene extends Phaser.Scene {
         this.updateScore(this.score + 100);
         this.showNotice('bonusNotice', '🎁 Ежедневный бонус: +100 очков!');
         localStorage.setItem(`daily_${this.dayKey}`, 'true');
+        this.dailyClaimed = true;
       }
-    }
-  
-    continueAfterFail() {
-      this.isGameOver = false;
-      this.bgm.resume();
     }
   
     gameOver() {
       if (this.shieldActive) {
         this.shieldActive = false;
-        localStorage.setItem('shieldEnabled', 'false');
         this.showNotice('bonusNotice', '🛡️ Щит спасает вас!');
         return;
       }
   
       this.bgm.stop();
-      this.scene.launch('GameOverScene', { score: this.score, canContinue: true });
+      this.saveProgress();
+      this.scene.launch('GameOverScene', { score: this.score });
+    }
+  
+    async saveProgress() {
+      if (typeof YandexGames !== 'undefined') {
+        await YandexGamesStorage.setItem('catTowerRecord', this.record);
+        await YandexGamesStorage.setItem('unlockedCat2', localStorage.getItem('unlockedCat2'));
+        await YandexGamesStorage.setItem('unlockedCat3', localStorage.getItem('unlockedCat3'));
+        await YandexGamesStorage.setItem('unlockedCat4', localStorage.getItem('unlockedCat4'));
+      }
     }
   }
